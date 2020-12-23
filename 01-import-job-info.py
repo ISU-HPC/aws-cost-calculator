@@ -6,10 +6,17 @@ from datetime import date, timezone, datetime
 import calendar
 import time
 from os.path import expanduser
+import subprocess
 
 home = expanduser("~")
 defaults_file = home + "/.my.cnf.slurm-aws"
 defaults_file_slurm = home + "/.my.cnf.slurmdb"
+
+
+# Get cluster name from slurm.conf.  Assume that lower-case form is used in database table names.
+cmd="/usr/bin/grep ClusterName /etc/slurm/slurm.conf | cut -f 2 -d '='"
+clustername = subprocess.check_output(cmd, shell=True).decode("utf-8").lower().rstrip()
+
 
 dbcost = pymysql.connect(read_default_file=defaults_file)
 dbslurm = pymysql.connect(read_default_file=defaults_file_slurm)
@@ -20,9 +27,10 @@ REBUILD=True
 
 cursorslurm = dbslurm.cursor()
 if REBUILD == True:
-    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM nova_job_table WHERE tres_alloc <> '' AND time_start <> 0 AND time_end <> 0"
+    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM " + clustername + "_job_table WHERE tres_alloc <> '' AND time_start <> 0 AND time_end <> 0"
 else:
-    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM nova_job_table WHERE tres_alloc <> '' AND time_start > " + str(round (time.time() - (90 * 86400))) + " AND time_end <>0"
+    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM " + clustername + "_job_table WHERE tres_alloc <> '' AND time_start > " + str(round (time.time() - (90 * 86400))) + " AND time_end <>0"
+
 cursorslurm.execute(sql)
 cursorcost = dbcost.cursor()
 while True:
