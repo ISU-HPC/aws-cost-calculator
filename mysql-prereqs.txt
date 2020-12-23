@@ -1,0 +1,90 @@
+MySQL(/MariaDB) setup with a user and permissions for this database.
+I'm open to a script here to actually create this database.
+
+MariaDB [slurm_analysis]> show tables;
++--------------------------+
+| Tables_in_slurm_analysis |
++--------------------------+
+| Amazon                   |
+| Amazonjobcost            |
+| jobinfo                  |
++--------------------------+
+
+MariaDB [slurm_analysis]> describe jobinfo;
++---------+------------+------+-----+---------+-------+
+| Field   | Type       | Null | Key | Default | Extra |
++---------+------------+------+-----+---------+-------+
+| jobid   | bigint(20) | NO   | PRI | NULL    |       |
+| runtime | int(11)    | NO   |     | NULL    |       |
+| enddate | date       | NO   |     | NULL    |       |
+| cores   | int(11)    | NO   |     | NULL    |       |
+| mem     | int(11)    | NO   |     | NULL    |       |
+| nodes   | int(11)    | NO   |     | NULL    |       |
+| gpus    | int(11)    | NO   |     | NULL    |       |
++---------+------------+------+-----+---------+-------+
+
+MariaDB [slurm_analysis]> describe Amazon;
++--------------------+-------------+------+-----+---------+-------+
+| Field              | Type        | Null | Key | Default | Extra |
++--------------------+-------------+------+-----+---------+-------+
+| instancetype       | varchar(50) | NO   | PRI | NULL    |       |
+| cores              | int(11)     | YES  |     | NULL    |       |
+| mem                | int(11)     | YES  |     | NULL    |       |
+| gpus               | int(11)     | NO   |     | NULL    |       |
+| latestreservedcost | int(11)     | YES  |     | NULL    |       |
+| latestspotcost     | int(11)     | YES  |     | NULL    |       |
++--------------------+-------------+------+-----+---------+-------+
+
+MariaDB [slurm_analysis]> describe Amazonjobcost;
++--------------------+-------------+------+-----+---------+-------+
+| Field              | Type        | Null | Key | Default | Extra |
++--------------------+-------------+------+-----+---------+-------+
+| jobid              | bigint(20)  | NO   | PRI | NULL    |       |
+| instancetype       | varchar(50) | NO   | MUL | NULL    |       |
+| origreservedcost   | int(11)     | NO   |     | NULL    |       |
+| origspotcost       | int(11)     | NO   |     | NULL    |       |
+| latestreservedcost | int(11)     | NO   |     | NULL    |       |
+| latestspotcost     | int(11)     | NO   |     | NULL    |       |
++--------------------+-------------+------+-----+---------+-------+
+
+So now a little explanations on these.
+
+The 'jobinfo' table is used to extract job requirements from slurm for purposes of sizing the Amazon job instance. 'mem' is in GB.
+
+The 'Amazon' table, similarly holds the Amazon EC2 instance types and their specs. Again 'mem' is in GB. 'lastestreservedcost' and 'latestspotcost' are in hundredths of cents per hour[1]. I update this table manually.
+
+The 'Amazonjobcost' table joins is the computation between these two, so we don't have to continually re-do everything. jobid is a foreign key to the jobinfo table, and instancetype is a foreign key to the Amazon table. 'origreservedcost' and 'origspotcost' are the reserved cost and spot cost prices, respectively, when initially computed, rounded up to the nearest cent.[2] 'latestreservedcost' and 'latestspotcost' are initially the same as 'origreservedcost' and 'origspotcost'. If we ever want to re-compute with updated prices, we can put those here. (e.g., if Amazon reduced the prices on a particular instance type, and you want to see how that affects past calculations).
+
+Putting these all together...
+
+First let's grab an instance type:
+MariaDB [slurm_analysis]> select * from Amazon LIMIT 1;
++--------------+-------+------+------+--------------------+----------------+
+| instancetype | cores | mem  | gpus | latestreservedcost | latestspotcost |
++--------------+-------+------+------+--------------------+----------------+
+| c5.12xlarge  |    48 |   96 |    0 |              20400 |           4561 |
++--------------+-------+------+------+--------------------+----------------+
+This means that the 'c5.12xlarge' instance type on Amazon has 48 cores, 96 GB of memory, no GPUs, costs $2.04/hour on reserved pricing, and $0.4561/hour on spot pricing.
+
+So, let's find a job that would "fit" on that instance type:
+MariaDB [slurm_analysis]> select * from Amazonjobcost where instancetype='c5.12xlarge' LIMIT 1;
++-------+--------------+------------------+--------------+--------------------+----------------+
+| jobid | instancetype | origreservedcost | origspotcost | latestreservedcost | latestspotcost |
++-------+--------------+------------------+--------------+--------------------+----------------+
+|  8492 | c5.12xlarge  |               10 |            4 |                 10 |              4 |
++-------+--------------+------------------+--------------+--------------------+----------------+
+Slurm jobid 8492 was the first job that would have run on this instance type. It would have cost $0.10 to run with reserved pricing and $0.04 to run on spot pricing.
+
+Let's find out about that job:
+MariaDB [slurm_analysis]> select * from jobinfo where jobid=8492;
++-------+---------+------------+-------+-----+-------+------+
+| jobid | runtime | enddate    | cores | mem | nodes | gpus |
++-------+---------+------------+-------+-----+-------+------+
+|  8492 |      84 | 2018-01-04 |    40 |  40 |     2 |    0 |
++-------+---------+------------+-------+-----+-------+------+
+The user was allocated 2 nodes, each with 40 cores and 40 GB of RAM. This job ran for 84 seconds.
+
+
+[1] Amazon gives their prices as $/hr, but I want to deal only with integers, so I multiply this by 10000, since that's how precise Amazon's costs are.
+
+[2] Costs here are in cents, again to keep everything in integers, and this being the minimum billable unit.
