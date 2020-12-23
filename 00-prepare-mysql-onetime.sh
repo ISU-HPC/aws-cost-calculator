@@ -5,7 +5,7 @@
 # access to the MySQL server.
 
 # Get the admin password
-read -p "Please provide the 'root' user password: " -s rootpw
+read -p "Please provide the mysql 'root' user password: " -s rootpw
 echo ""
 
 # Get username & password for the unprivileged MySQL user
