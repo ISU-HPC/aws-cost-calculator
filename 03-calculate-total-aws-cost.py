@@ -8,15 +8,15 @@ from os.path import expanduser
 
 home = expanduser("~")
 defaults_file = home + "/.my.cnf.slurm-aws"
-defaults_file_slurm = home + "/.my.cnf.slurmdb"
 
-dbcost = pymysql.connect(read_default_file=defaults_file)
-dbslurm = pymysql.connect(read_default_file=defaults_file_slurm)
+dbslurm = pymysql.connect(read_default_file=defaults_file)
 
 cursorslurm = dbslurm.cursor()
 sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+print(sql)
 cursorslurm.execute(sql)
 data=cursorslurm.fetchone()
+print(data)
 reserved30=str('${:,.0f}'.format(data[0]/100))
 spot30=str('${:,.0f}'.format(data[1]/100))
 sql = "SELECT SUM(origreservedcost),SUM(origspotcost) FROM Amazonjobcost"
