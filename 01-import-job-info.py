@@ -27,9 +27,9 @@ REBUILD=True
 
 cursorslurm = dbslurm.cursor()
 if REBUILD == True:
-    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM " + clustername + "_job_table WHERE tres_alloc <> '' AND time_start <> 0 AND time_end <> 0"
+    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM `" + clustername + "_job_table` WHERE tres_alloc <> '' AND time_start <> 0 AND time_end <> 0"
 else:
-    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM " + clustername + "_job_table WHERE tres_alloc <> '' AND time_start > " + str(round (time.time() - (90 * 86400))) + " AND time_end <>0"
+    sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM `" + clustername + "_job_table` WHERE tres_alloc <> '' AND time_start > " + str(round (time.time() - (90 * 86400))) + " AND time_end <>0"
 
 cursorslurm.execute(sql)
 cursorcost = dbcost.cursor()
@@ -40,8 +40,10 @@ while True:
         runtime = data[2]-data[1]
         enddate = date.fromtimestamp(data[2]).strftime("%Y-%m-%d")
         gpus = 0
+        gres = {}
         tres=dict(s.split('=',1) for s in data[3].split(","))
-        gres=dict(s.split(':',1) for s in data[4].split(","))
+        if data[4] != '':
+            gres = dict(s.split(':',1) for s in data[4].split(",")) 
 
         # NOTE: Your trackables resources may be different than mine. I'm not positive how things change site-to-site.
         # Separate out the tres
