@@ -88,7 +88,7 @@ reservedall=str('${:,.0f}'.format(data[0]/100))
 spotall=str('${:,.0f}'.format(data[1]/100))
 dbslurm.close()
 
-print("AWS Cost         Spot-Pricing            Reserved")
+print("AWS Cost          Spot-Pricing           Reserved")
 print("-------------------------------------------------")
 print("Last   7 days:    %12s       %12s" % (spot7,reserved7))
 print("Last  14 days:    %12s       %12s" % (spot14,reserved14))
