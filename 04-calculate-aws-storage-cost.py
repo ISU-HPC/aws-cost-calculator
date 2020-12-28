@@ -1,19 +1,65 @@
 #!/bin/python3
 
+import argparse
 import subprocess
 
+# Create an ArgumentParser object to easily handle command-line options and
+# auto-generate helpful CLI help when -h/--help flags are used.
+parser = argparse.ArgumentParser(description='Estimate AWS storage costs')
+
+parser.add_argument('-t', '--fstype',
+                    dest='fstype',
+                    type=str,
+                    help='Grab all filesystems of specified type.')
+parser.add_argument('-d', '--dirs',
+                    dest='dirs',
+                    type=str,
+                    help='Directories to consider in the anlysis.  Space-separated list within quotes.')
+parser.add_argument('-v', '--verbose',
+                    dest='verbose',
+                    action='store_true',
+                    help='Output extra messages.')
+
+
+# Parse the arguments provided by the user
+args, leftovers = parser.parse_known_args()
+
+
+# Define the storage paths to be considered.  Use CLI arguments if present.
+# Otherwise, prompt for user input.
 defaultpaths = "/home /work"
-storagepaths = input("Provide space-separated list of paths to include [/home /work]: ")
-if not storagepaths:
-    storagepaths = defaultpaths
+storagepaths = defaultpaths
+if args.dirs is not None:
+    storagepaths = args.dirs
+    pass
+else:
+    if args.fstype is None:
+        # Only prompt if filesystem type wasn't specified on CLI
+        storagepaths = input("Provide space-separated list of paths to include [/home /work]: ")
+        pass
+    if not storagepaths:
+        storagepaths = defaultpaths
+        pass
     pass
 
+# Add paths defined by filesystem type, if defined on the CLI
+if args.fstype is not None:
+    cmd = "df -T | grep " + args.fstype + " | awk '{ print $NF }' | tr '\n' ' '"
+    extradirs = subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip()
+    storagepaths += " " + extradirs
+    pass
+
+# Print the combined filesystem list
+if args.verbose is True:
+    print("Directories included in this analysis:")
+    print(storagepaths)
+
+# Get the sizes of the specified filesystems
 cmd = "df -BG " + storagepaths + " | tail -n+2 | awk '{ print $3 }' | tr -d 'G' | paste -sd+ | bc"
 gb_used = float(subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip())
 
 cmd = "df -BG " + storagepaths + " | tail -n+2 | awk '{ print $2 }' | tr -d 'G' | paste -sd+ | bc"
 gb_max = float(subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip())
-
 
 # Calculate storage costs
 aws_price_0_50 = 0.023
@@ -52,7 +98,6 @@ max_glacier_cost = "${:,.2f}".format(max_glacier)
 
 max_deep_glacier = gb_max * aws_price_deep_glacier
 max_deep_glacier_cost = "${:,.2f}".format(max_deep_glacier)
-
 
 # Calculate egress costs
 used_s3_to_internet = 0.0
@@ -110,13 +155,13 @@ print("    Deep Glacier:  %12s" % max_deep_glacier_retrieve_cost)
 print("")
 print("Data Transfer Time")
 print("  Currently-Used:        %8.0f GB" % gb_used)
-print("    10 Mb/s:   % 9.2f [hrs]" % (used_xfer_hrs_gigabit * 100.0))
-print("    100 Mb/s:  % 9.2f [hrs]" % (used_xfer_hrs_gigabit * 10.0))
-print("    1 Gb/s:    % 9.2f [hrs]" % (used_xfer_hrs_gigabit))
-print("    10 Gb/s:   % 9.2f [hrs]" % (used_xfer_hrs_gigabit / 10.0))
+print("    10 Mb/s:   % 11.2f [hrs]" % (used_xfer_hrs_gigabit * 100.0))
+print("    100 Mb/s:  % 11.2f [hrs]" % (used_xfer_hrs_gigabit * 10.0))
+print("    1 Gb/s:    % 11.2f [hrs]" % (used_xfer_hrs_gigabit))
+print("    10 Gb/s:   % 11.2f [hrs]" % (used_xfer_hrs_gigabit / 10.0))
 print("  Filesystem-Maximum:    %8.0f GB" % gb_max)
-print("    10 Mb/s:   % 9.2f [hrs]" % (max_xfer_hrs_gigabit * 100.0))
-print("    100 Mb/s:  % 9.2f [hrs]" % (max_xfer_hrs_gigabit * 10.0))
-print("    1 Gb/s:    % 9.2f [hrs]" % (max_xfer_hrs_gigabit))
-print("    10 Gb/s:   % 9.2f [hrs]" % (max_xfer_hrs_gigabit / 10.0))
+print("    10 Mb/s:   % 11.2f [hrs]" % (max_xfer_hrs_gigabit * 100.0))
+print("    100 Mb/s:  % 11.2f [hrs]" % (max_xfer_hrs_gigabit * 10.0))
+print("    1 Gb/s:    % 11.2f [hrs]" % (max_xfer_hrs_gigabit))
+print("    10 Gb/s:   % 11.2f [hrs]" % (max_xfer_hrs_gigabit / 10.0))
 print("")
