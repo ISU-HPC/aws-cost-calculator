@@ -160,7 +160,7 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     pass
 
-if args.days is None:
+if (args.days is None) and (args.start is not None) and (args.end is not None):
     # If here, start and/or end dates are specified, so use them
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -194,7 +194,7 @@ if args.days is None:
         pass    
 
 
-else:
+if (args.days is not None) and (args.start is None) and (args.end is None):
     # Get calculation for last N days
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
