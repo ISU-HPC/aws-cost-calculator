@@ -27,8 +27,16 @@ args, leftovers = parser.parse_known_args()
 
 # Define the storage paths to be considered.  Use CLI arguments if present.
 # Otherwise, prompt for user input.
+
+# Add paths defined by filesystem type, if defined on the CLI
 defaultpaths = "/home /work"
 storagepaths = defaultpaths
+if args.fstype is not None:
+    cmd = "df -T | grep " + args.fstype + " | awk '{ print $NF }' | tr '\n' ' '"
+    extradirs = subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip()
+    storagepaths = extradirs
+    pass
+
 if args.dirs is not None:
     storagepaths = args.dirs
     pass
@@ -40,13 +48,6 @@ else:
     if not storagepaths:
         storagepaths = defaultpaths
         pass
-    pass
-
-# Add paths defined by filesystem type, if defined on the CLI
-if args.fstype is not None:
-    cmd = "df -T | grep " + args.fstype + " | awk '{ print $NF }' | tr '\n' ' '"
-    extradirs = subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip()
-    storagepaths += " " + extradirs
     pass
 
 # Print the combined filesystem list
