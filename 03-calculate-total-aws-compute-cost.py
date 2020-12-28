@@ -159,8 +159,42 @@ if (args.start is None) and (args.end is None) and (args.days is None):
     print("All time:                %12s       %12s" % (spotall,reservedall))
 
     pass
+
+if args.days is None:
+    # If here, start and/or end dates are specified, so use them
+    startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
+    enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    if args.start is not None:
+        startdate = args.start
+        pass 
+    if args.end is not None:
+        enddate = args.end
+    sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
+    cursorcost.execute(sql)
+    data=cursorcost.fetchone()
+    spot1 = "$0"
+    reserved1 = "$0"
+    if data[0]:
+        reserved1=str('${:,.0f}'.format(data[0]/100))
+    if data[1]:
+        spot1=str('${:,.0f}'.format(data[1]/100))
+
+    if args.parsable:
+        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
+    elif args.headers:
+        print("Start,End,Spot,Reserved")
+        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
+    else:
+        print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
+        print("----------------------------------------------------------")
+        print("%s - %s:   %12s       %12s" % (startdate,enddate,spot1,reserved1))
+
+    pass
+
+
+
 else:
-    # Get calculation for specified time period
+    # Get calculation for last N days
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
