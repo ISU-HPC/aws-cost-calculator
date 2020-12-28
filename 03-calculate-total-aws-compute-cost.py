@@ -35,7 +35,7 @@ parser.add_argument('-p', '--parsable',
 parser.add_argument('--with-headers',
                     dest='headers',
                     action='store_true',
-                    help='Include header row with parsable output.  Implies -p/--parsable.')
+                    help='Include header row.  Applies to both parsable and tabular output.')
 
 
 # Parse the arguments provided by the user
@@ -180,17 +180,18 @@ if args.days is None:
         spot1=str('${:,.0f}'.format(data[1]/100))
 
     if args.parsable:
-        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
-    elif args.headers:
-        print("Start,End,Spot,Reserved")
-        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
+        if args.headers:
+            print("Start,End,Spot,Reserved")
+            pass
+        print("%s|%s|%s|%s" % (startdate,enddate,spot1,reserved1))
+        pass
     else:
-        print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
-        print("----------------------------------------------------------")
+        if args.headers:
+            print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
+            print("----------------------------------------------------------")
+            pass
         print("%s - %s:   %12s       %12s" % (startdate,enddate,spot1,reserved1))
-
-    pass
-
+        pass    
 
 
 else:
@@ -209,14 +210,18 @@ else:
         spot1=str('${:,.0f}'.format(data[1]/100))
 
     if args.parsable:
-        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
-    elif args.headers:
-        print("Start,End,Spot,Reserved")
-        print("%s,%s,%s,%s" % (startdate,enddate,spot1,reserved1))
+        if args.headers:
+            print("Start,End,Spot,Reserved")
+            pass
+        print("%s|%s|%s|%s" % (startdate,enddate,spot1,reserved1))
+        pass
     else:
-        print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
-        print("----------------------------------------------------------")
+        if args.headers:
+            print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
+            print("----------------------------------------------------------")
+            pass
         print("Last % 4d days:            %12s       %12s" % (ndays,spot1,reserved1))
+        pass 
 
     pass
 
