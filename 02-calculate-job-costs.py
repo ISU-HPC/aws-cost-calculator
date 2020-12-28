@@ -6,9 +6,25 @@ from datetime import date
 import array
 import math
 from os.path import expanduser
+import argparse
+
+# Create an ArgumentParser object to easily handle command-line options and
+# auto-generate helpful CLI help when -h/--help flags are used.
+parser = argparse.ArgumentParser(description='Import slurm job info into analysis database')
+
+parser.add_argument('--defaults-analysis',
+                    dest='defaults_analysis',
+                    type=str,
+                    help='MySQL connection file for analysis database')
+
+# Parse the arguments provided by the user
+args, leftovers = parser.parse_known_args()
 
 home = expanduser("~")
 defaults_file = home + "/.my.cnf.slurm-aws"
+if args.defaults_analysis is not None:
+    defaults_file = args.defaults_analysis
+    pass
 
 dbcost = pymysql.connect(read_default_file=defaults_file)
 
