@@ -10,7 +10,7 @@ import argparse
 
 # Create an ArgumentParser object to easily handle command-line options and
 # auto-generate helpful CLI help when -h/--help flags are used.
-parser = argparse.ArgumentParser(description='Import slurm job info into analysis database')
+parser = argparse.ArgumentParser(description='Calculate AWS cost for imported slurm job info')
 
 parser.add_argument('--defaults-analysis',
                     dest='defaults_analysis',
