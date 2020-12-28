@@ -13,6 +13,17 @@ dbslurm = pymysql.connect(read_default_file=defaults_file)
 
 cursorslurm = dbslurm.cursor()
 
+# Last 1 day pricing
+sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+cursorslurm.execute(sql)
+data=cursorslurm.fetchone()
+spot1 = "$0"
+reserved1 = "$0"
+if data[0]:
+    reserved1=str('${:,.0f}'.format(data[0]/100))
+if data[1]:
+    spot1=str('${:,.0f}'.format(data[1]/100))
+
 # Last 7 days pricing
 sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
 cursorslurm.execute(sql)
@@ -90,6 +101,7 @@ dbslurm.close()
 
 print("AWS Cost          Spot-Pricing           Reserved")
 print("-------------------------------------------------")
+print("Last   1 day:     %12s       %12s" % (spot1,reserved1))
 print("Last   7 days:    %12s       %12s" % (spot7,reserved7))
 print("Last  14 days:    %12s       %12s" % (spot14,reserved14))
 print("Last  30 days:    %12s       %12s" % (spot30,reserved30))
