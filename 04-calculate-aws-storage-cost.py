@@ -64,9 +64,13 @@ gb_max = float(subprocess.check_output(cmd, shell=True).decode("utf-8").rstrip()
 
 # Calculate storage costs
 aws_ebs_price = 0.08
+aws_ebs_hdd_price = 0.045
 
 used_ebs_cost = "${:,.2f}".format(gb_used * aws_ebs_price)
 max_ebs_cost = "${:,.2f}".format(gb_max * aws_ebs_price)
+used_ebs_hdd_cost = "${:,.2f}".format(gb_used * aws_ebs_hdd_price)
+max_ebs_hdd_cost = "${:,.2f}".format(gb_max * aws_ebs_hdd_price)
+
 
 aws_price_0_50 = 0.023
 aws_price_50_450 = 0.022
@@ -141,12 +145,14 @@ max_xfer_hrs_gigabit = gb_max * 8.0 / 3600.0
 print("")
 print("MONTHLY Storage Costs")
 print("  Currently-Used:        %8.0f GB" % gb_used)
-print("    EBS:           %12s" % used_ebs_cost)
+print("    EBS SSD:       %12s" % used_ebs_cost)
+print("    EBS HDD:       %12s" % used_ebs_hdd_cost)
 print("    S3 Standard:   %12s" % used_s3_cost)
 print("    Glacier:       %12s" % used_glacier_cost)
 print("    Deep Glacier:  %12s" % used_deep_glacier_cost)
 print("  Filesystem-Maximum:    %8.0f GB" % gb_max)
-print("    EBS:           %12s" % max_ebs_cost)
+print("    EBS SSD:       %12s" % max_ebs_cost)
+print("    EBS HDD:       %12s" % max_ebs_hdd_cost)
 print("    S3 Standard:   %12s" % max_s3_cost)
 print("    Glacier:       %12s" % max_glacier_cost)
 print("    Deep Glacier:  %12s" % max_deep_glacier_cost)
