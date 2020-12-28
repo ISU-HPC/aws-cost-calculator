@@ -26,6 +26,7 @@ while True:
     except:
         break
 
+# Calculate AWS costs for slurm jobs, based on job info which has been imported from the slurm database
 sql = "SELECT a.jobid,a.runtime,a.cores,a.mem,a.nodes,a.gpus FROM jobinfo a NATURAL LEFT JOIN Amazonjobcost b WHERE b.jobid IS NULL ORDER BY a.jobid DESC"
 cursorcost.execute(sql)
 while True:
@@ -46,7 +47,7 @@ while True:
 # Take the cost / 100 to get cents/hr. Divide that by 3600 to get cents/second, and round up to the nearest penny. Save as a string since we're using it for string manipulation
         reservedcost=str(math.ceil(row['reservedcost']*runtime*nodes/360000))
         spotcost=str(math.ceil(row['spotcost']*runtime*nodes/360000))
-        sql = "INSERT IGNORE INTO Amazonjobcost (jobid,instancetype,origreservedcost,origspotcost,latestreservedcost,latestspotcost) VALUES (" + jobid + ",'" + selectedrow['name'] + "'," + reservedcost + "," + spotcost + "," + reservedcost + "," + spotcost + ")"
+        sql = "REPLACE INTO Amazonjobcost (jobid,instancetype,origreservedcost,origspotcost,latestreservedcost,latestspotcost) VALUES (" + jobid + ",'" + selectedrow['name'] + "'," + reservedcost + "," + spotcost + "," + reservedcost + "," + spotcost + ")"
         cursoradd.execute(sql)
         dbcost.commit()
     except:
