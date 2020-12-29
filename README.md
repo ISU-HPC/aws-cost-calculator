@@ -2,6 +2,10 @@
 
 This is based on "Amazon Cost Comparison" from Kansas State: https://gitlab.beocat.ksu.edu/Admin-Public/amazon-cost-comparison
 
+Note that no consideration is given to CPU speeds and/or hyperthreading.  Corase resource usage (CPU-count, RAM, GPUs) is all that
+is considered.  If you have reason to believe that there is a consistent scalefactor between your cluster and AWS (e.g., ratio 
+of CPU clock speeds, consistent performance effect due to hyperthreading) you will need to scale the cost estimate accordingly.
+
 ## Prerequisites
 
 - python3
