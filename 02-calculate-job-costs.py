@@ -65,7 +65,6 @@ while True:
                 selectedrow=row
                 break
 # Costs in Amazon are in 100th's of cents per hour, so a value of 10000 would be $1/hr. We save this in cents per job. This is that conversion.
-# We also assume that since an Amazon VCPU is half a core, it will take twice as long on Amazon as on Beocat.
 # Take the cost / 100 to get cents/hr. Divide that by 3600 to get cents/second, and round up to the nearest penny. Save as a string since we're using it for string manipulation
         reservedcost=str(math.ceil(row['reservedcost']*runtime*nodes/360000))
         spotcost=str(math.ceil(row['spotcost']*runtime*nodes/360000))

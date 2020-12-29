@@ -3,6 +3,7 @@ import os
 import datetime
 import pymysql
 from datetime import date, datetime, timedelta
+import calendar
 import time
 from os.path import expanduser
 import argparse 
@@ -23,6 +24,10 @@ parser.add_argument('--end',
                     dest='end',
                     type=str,
                     help='End date for cost calculation (default: 1 day ago) (ignored if --days is used)')
+parser.add_argument('--monthlies',
+                    dest='monthlies',
+                    action='store_true',
+                    help='If specified with --start and/or --end, calculate per-month costs within specified date range (ignored otherwise)')
 parser.add_argument('-d', '--days',
                     dest='days',
                     metavar='N',
@@ -58,6 +63,11 @@ dbcost = pymysql.connect(read_default_file=defaults_file)
 cursorcost = dbcost.cursor()
 
 
+# Generate output based on the CLI flags.  This is admittedly rough.
+
+#
+# First, consider when no CLI flags are given.  Output a table of costs for common times-of-interest.
+#
 if (args.start is None) and (args.end is None) and (args.days is None):
     # If no date info was specified, generate a table of common time intervals
 
@@ -160,7 +170,12 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     pass
 
-if (args.days is None) and (args.start is not None) and (args.end is not None):
+
+#
+# Next, consider when start/end dates are given and we are NOT calculating the monthly 
+# summaries in that interval.
+#
+if (args.days is None) and (not args.monthlies)  and (args.start is not None) and (args.end is not None):
     # If here, start and/or end dates are specified, so use them
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -194,7 +209,68 @@ if (args.days is None) and (args.start is not None) and (args.end is not None):
         pass    
 
 
-if (args.days is not None) and (args.start is None) and (args.end is None):
+#
+# Next, consider start/end dates WITH monthly summaries in that date range
+#
+if (args.days is None) and (args.monthlies)  and (args.start is not None) and (args.end is not None):
+    startdate = args.start
+    enddate = args.start
+
+    final_end_date = datetime.strptime(args.end, '%Y-%m-%d').date()
+    current_start_date = datetime.strptime(args.start, '%Y-%m-%d').date()
+    current_end_date = current_start_date
+
+    if args.parsable:
+       if args.headers:
+           print("Start,End,Spot,Reserved")
+           pass
+    else:
+        if args.headers:
+            print("AWS Compute-Only Cost      Spot-Pricing           Reserved")
+            print("----------------------------------------------------------")
+            pass
+        pass
+
+
+    while current_end_date < final_end_date:
+
+        # Update the ending date to the end of the month.  Limit to the user-specified final end date.
+        # https://stackoverflow.com/a/43106671
+        d = current_start_date
+        current_end_date = date(d.year, d.month, calendar.monthrange(d.year, d.month)[-1]) 
+        current_end_date = min(current_end_date, final_end_date)
+
+        startdate = current_start_date.strftime("%Y-%m-%d")
+        enddate = current_end_date.strftime("%Y-%m-%d")
+
+        sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
+        cursorcost.execute(sql)
+        data=cursorcost.fetchone()
+        spot1 = "$0"
+        reserved1 = "$0"
+        if data[0]:
+            reserved1=str('${:,.0f}'.format(data[0]/100))
+        if data[1]:
+            spot1=str('${:,.0f}'.format(data[1]/100))
+
+        if args.parsable:
+            print("%s|%s|%s|%s" % (startdate,enddate,spot1,reserved1))
+            pass
+        else:
+            print("%s - %s:   %12s       %12s" % (startdate,enddate,spot1,reserved1))
+            pass
+
+        # Increment start date to the next month
+        current_start_date = current_end_date + timedelta(days=+1)
+
+        pass
+    pass
+
+
+# 
+# Next, consider when "last N days" has been requested
+#
+if (args.days is not None):  
     # Get calculation for last N days
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
