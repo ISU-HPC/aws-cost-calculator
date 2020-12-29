@@ -187,12 +187,18 @@ if (args.days is None) and (not args.monthlies)  and (args.start is not None) an
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
-    spot1 = "$0"
-    reserved1 = "$0"
-    if data[0]:
-        reserved1=str('${:,.0f}'.format(data[0]/100))
-    if data[1]:
-        spot1=str('${:,.0f}'.format(data[1]/100))
+    spot1 = "0"
+    reserved1 = "0"
+    if not args.parsable:
+        if data[0]:
+            reserved1=str('${:,.0f}'.format(data[0]/100))
+        if data[1]:
+            spot1=str('${:,.0f}'.format(data[1]/100))
+    else:
+        if data[0]:
+            reserved1=str(data[0]/100)
+        if data[1]:
+            spot1=str(data[1]/100)
 
     if args.parsable:
         if args.headers:
@@ -246,12 +252,18 @@ if (args.days is None) and (args.monthlies)  and (args.start is not None) and (a
         sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
         cursorcost.execute(sql)
         data=cursorcost.fetchone()
-        spot1 = "$0"
-        reserved1 = "$0"
-        if data[0]:
-            reserved1=str('${:,.0f}'.format(data[0]/100))
-        if data[1]:
-            spot1=str('${:,.0f}'.format(data[1]/100))
+        spot1 = "0"
+        reserved1 = "0"
+        if not args.parsable:    
+            if data[0]:
+                reserved1=str('${:,.0f}'.format(data[0]/100))
+            if data[1]:
+                spot1=str('${:,.0f}'.format(data[1]/100))
+        else:
+            if data[0]:
+                reserved1=str(data[0]/100)
+            if data[1]:
+                spot1=str(data[1]/100)
 
         if args.parsable:
             print("%s|%s|%s|%s" % (startdate,enddate,spot1,reserved1))
@@ -278,12 +290,19 @@ if (args.days is not None):
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (jobid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
-    spot1 = "$0"
-    reserved1 = "$0"
-    if data[0]:
-        reserved1=str('${:,.0f}'.format(data[0]/100))
-    if data[1]:
-        spot1=str('${:,.0f}'.format(data[1]/100))
+    spot1 = "0"
+    reserved1 = "0"
+    if not args.parsable:
+        if data[0]:
+            reserved1=str('${:,.0f}'.format(data[0]/100))
+        if data[1]:
+            spot1=str('${:,.0f}'.format(data[1]/100))
+    else:
+        if data[0]:
+            reserved1=str(data[0]/100)
+        if data[1]:
+            spot1=str(data[1]/100)
+   
 
     if args.parsable:
         if args.headers:
