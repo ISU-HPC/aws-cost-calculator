@@ -59,11 +59,14 @@ if args.days is not None:
 
 
 # Get cluster name from slurm.conf.  Assume that lower-case form is used in database table names.
-cmd="/usr/bin/grep ClusterName /etc/slurm/slurm.conf | cut -f 2 -d '='"
-clustername = subprocess.check_output(cmd, shell=True).decode("utf-8").lower().rstrip()
-job_table = clustername + "_job_table"
+job_table = "cluster_job_table"
 if args.slurm_job_table is not None:
     job_table = args.slurm_job_table
+    pass
+else:
+    cmd="/usr/bin/grep ClusterName /etc/slurm/slurm.conf | cut -f 2 -d '='"
+    clustername = subprocess.check_output(cmd, shell=True).decode("utf-8").lower().rstrip()
+    job_table = clustername + "_job_table"
     pass
 
 dbcost = pymysql.connect(read_default_file=defaults_file)

@@ -16,6 +16,10 @@ parser.add_argument('--defaults-analysis',
                     dest='defaults_analysis',
                     type=str,
                     help='MySQL connection file for analysis database')
+parser.add_argument('-v', '--verbose',
+                    dest='verbose',
+                    action='store_true',
+                    help='Output extra messages.')
 
 # Parse the arguments provided by the user
 args, leftovers = parser.parse_known_args()
@@ -45,6 +49,8 @@ while True:
 # Calculate AWS costs for slurm jobs, based on job info which has been imported from the slurm database
 sql = "SELECT a.jobid,a.runtime,a.cores,a.mem,a.nodes,a.gpus FROM jobinfo a NATURAL LEFT JOIN Amazonjobcost b WHERE b.jobid IS NULL ORDER BY a.jobid DESC"
 cursorcost.execute(sql)
+count = 0
+total_count = cursorcost.rowcount
 while True:
     try:
         data=cursorcost.fetchone()
@@ -68,5 +74,18 @@ while True:
         dbcost.commit()
     except:
         break
+        #continue
 
+    count += 1
+    if count % 1000 == 0:
+        if args.verbose:
+            print("Processed record % 12d of % 12d" % (count,total_count))
+            pass
+        pass
+
+    pass
+
+if args.verbose:
+    print("Processed %d records" % count)
+    pass
 dbcost.close()
