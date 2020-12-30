@@ -24,10 +24,18 @@ parser.add_argument('--end',
                     dest='end',
                     type=str,
                     help='End date for cost calculation (default: 1 day ago) (ignored if --days is used)')
-parser.add_argument('--monthlies',
-                    dest='monthlies',
+parser.add_argument('--monthly',
+                    dest='monthly',
                     action='store_true',
                     help='If specified with --start and/or --end, calculate per-month costs within specified date range (ignored otherwise)')
+parser.add_argument('--weekly',
+                    dest='weekly',
+                    action='store_true',
+                    help='If specified with --start and/or --end, calculate per-week costs within specified date range (ignored otherwise)')
+parser.add_argument('--daily',
+                    dest='daily',
+                    action='store_true',
+                    help='If specified with --start and/or --end, calculate per-day costs within specified date range (ignored otherwise)')
 parser.add_argument('-d', '--days',
                     dest='days',
                     metavar='N',
@@ -175,7 +183,7 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 # Next, consider when start/end dates are given and we are NOT calculating the monthly 
 # summaries in that interval.
 #
-if (args.days is None) and (not args.monthlies)  and (args.start is not None) and (args.end is not None):
+if (args.days is None) and (not (args.monthly or args.weekly or args.daily))  and (args.start is not None) and (args.end is not None):
     # If here, start and/or end dates are specified, so use them
     startdate = (datetime.now() - timedelta(days=ndays)).strftime("%Y-%m-%d")
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -190,6 +198,8 @@ if (args.days is None) and (not args.monthlies)  and (args.start is not None) an
     spot1 = "0"
     reserved1 = "0"
     if not args.parsable:
+        spot1 = "$0"
+        reserved1 = "$0"
         if data[0]:
             reserved1=str('${:,.0f}'.format(data[0]/100))
         if data[1]:
@@ -216,9 +226,9 @@ if (args.days is None) and (not args.monthlies)  and (args.start is not None) an
 
 
 #
-# Next, consider start/end dates WITH monthly summaries in that date range
+# Next, consider start/end dates WITH periodic summaries in that date range
 #
-if (args.days is None) and (args.monthlies)  and (args.start is not None) and (args.end is not None):
+if (args.days is None) and (args.monthly or args.weekly or args.daily)  and (args.start is not None) and (args.end is not None):
     startdate = args.start
     enddate = args.start
 
@@ -243,7 +253,12 @@ if (args.days is None) and (args.monthlies)  and (args.start is not None) and (a
         # Update the ending date to the end of the month.  Limit to the user-specified final end date.
         # https://stackoverflow.com/a/43106671
         d = current_start_date
-        current_end_date = date(d.year, d.month, calendar.monthrange(d.year, d.month)[-1]) 
+        if args.monthly:
+            current_end_date = date(d.year, d.month, calendar.monthrange(d.year, d.month)[-1]) 
+        if args.weekly:
+            current_end_date = current_start_date + timedelta(days=+6)   # +6 because start date is inclusive
+        if args.daily:
+            current_end_date = current_start_date
         current_end_date = min(current_end_date, final_end_date)
 
         startdate = current_start_date.strftime("%Y-%m-%d")
@@ -255,6 +270,8 @@ if (args.days is None) and (args.monthlies)  and (args.start is not None) and (a
         spot1 = "0"
         reserved1 = "0"
         if not args.parsable:    
+            spot1 = "$0"
+            reserved1 = "$0"
             if data[0]:
                 reserved1=str('${:,.0f}'.format(data[0]/100))
             if data[1]:
@@ -293,6 +310,8 @@ if (args.days is not None):
     spot1 = "0"
     reserved1 = "0"
     if not args.parsable:
+        spot1 = "$0"
+        reserved1 = "$0"
         if data[0]:
             reserved1=str('${:,.0f}'.format(data[0]/100))
         if data[1]:
