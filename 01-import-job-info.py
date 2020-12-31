@@ -2,7 +2,7 @@
 import os
 import datetime
 import pymysql
-from datetime import date, timezone, datetime
+from datetime import date, timezone, datetime, timedelta
 import calendar
 import time
 from os.path import expanduser
@@ -40,6 +40,16 @@ parser.add_argument('--end',
                     metavar='YYYY-MM-DD',
                     type=str,
                     help='End date for job import (default: now)')
+parser.add_argument('--not-before',
+                    dest='not_before',
+                    type=str,
+                    metavar='YYYY-MM-DD',
+                    help='Do not import job data with start time before this date (default: 10 years before now)')
+parser.add_argument('--max-duration',
+                    dest='max_duration',
+                    metavar='MAX-DAYS',
+                    type=float,
+                    help='Do not import job data with a duration longer than this value, in DAYS (default: 365)')
 parser.add_argument('-v', '--verbose',
                     dest='verbose',
                     action='store_true',
@@ -91,8 +101,15 @@ if args.end is not None:
     enddate += 86400       # Use *end* of the day to be inclusive.
     pass
 
+min_start = (datetime.now() - timedelta(days=3650)).timestamp() 
+if args.not_before is not None:
+    min_start = datetime.strptime(args.not_before, '%Y-%m-%d').timestamp()
+    pass
 
-
+max_duration = 365 * 86400   # Default: 365 days
+if args.max_duration is not None:
+    max_duration = int(args.max_duration * 86400.0)    # Convert DAYS to SECONDS
+    pass
 
 dbcost = pymysql.connect(read_default_file=defaults_file)
 dbslurm = pymysql.connect(read_default_file=defaults_file_slurm)
@@ -136,6 +153,20 @@ while True:
         # Check for 'gpu' in gres info
         if 'gpu' in gres.keys():
             gpus=gres['gpu']
+
+        # Sanity-checks
+        if data[2] < min_start:
+            print("JobID: %d -- Start time %s before %s" % (jobid, str(data[2]), str(min_start)))
+            print(data)
+            continue
+        if runtime > max_duration:
+            print("JobID: %d -- Runtime %s > %s" % (jobid, str(runtime), str(max_duration)))
+            print(data)
+            continue
+        if runtime < 0:
+            print("JobID: %d -- Runtime %s is negative" % (jobid, str(runtime)))
+            print(data)
+            continue
 
         # Insert data into analysis job info table.  REPLACE is used so that re-processing slurm jobs will update values as necessary.
         sql2 = "REPLACE INTO jobinfo (dbid, jobid, runtime, enddate, cores, mem, nodes, gpus, part) VALUES (" + str(dbid) + "," + str(jobid) + "," + str(runtime) + ",'" + enddate + "'," + str(cores) + "," + str(mem) + "," + str(nodes) + "," + str(gpus) + ",'" + str(part) + "')"
