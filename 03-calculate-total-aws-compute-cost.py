@@ -41,6 +41,10 @@ parser.add_argument('-d', '--days',
                     metavar='N',
                     type=int,
                     help='Calculate costs for past N days')
+parser.add_argument('--partition',
+                    dest='partition',
+                    type=str,
+                    help='Limit analysis to jobs in the specified slurm partition')
 parser.add_argument('-p', '--parsable',
                     dest='parsable',
                     action='store_true',
@@ -81,6 +85,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 1 day pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot1 = "$0"
@@ -92,6 +98,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 7 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot7 = "$0"
@@ -103,6 +111,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 14 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot14 = "$0"
@@ -114,6 +124,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 30 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot30 = "$0"
@@ -125,6 +137,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 60 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot60 = "$0"
@@ -136,6 +150,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 90 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot90 = "$0"
@@ -147,6 +163,8 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # Last 365 days pricing
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d") + "' AND jobinfo.enddate <= '" + (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot365 = "$0"
@@ -159,10 +177,16 @@ if (args.start is None) and (args.end is None) and (args.days is None):
 
     # All-time pricing
     sql = "SELECT SUM(origreservedcost),SUM(origspotcost) FROM Amazonjobcost"
+    if args.partition is not None:
+        sql += " INNER JOIN jobinfo USING (dbid) WHERE jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
-    reservedall=str('${:,.0f}'.format(data[0]/100))
-    spotall=str('${:,.0f}'.format(data[1]/100))
+    reservedall = "$0"
+    spotall = "$0"
+    if data[0]:
+        reservedall=str('${:,.0f}'.format(data[0]/100))
+    if data[1]:
+        spotall=str('${:,.0f}'.format(data[1]/100))
 
 
     print("AWS Compute-Only Cost    Spot-Pricing           Reserved")
@@ -193,6 +217,8 @@ if (args.days is None) and (not (args.monthly or args.weekly or args.daily))  an
     if args.end is not None:
         enddate = args.end
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot1 = "0"
@@ -265,6 +291,8 @@ if (args.days is None) and (args.monthly or args.weekly or args.daily)  and (arg
         enddate = current_end_date.strftime("%Y-%m-%d")
 
         sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
+        if args.partition is not None:
+            sql += " AND jobinfo.part = '" + args.partition + "'"
         cursorcost.execute(sql)
         data=cursorcost.fetchone()
         spot1 = "0"
@@ -305,6 +333,8 @@ if (args.days is not None):
     enddate = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
     sql = "SELECT SUM(Amazonjobcost.origreservedcost),SUM(Amazonjobcost.origspotcost) FROM Amazonjobcost INNER JOIN jobinfo USING (dbid) WHERE jobinfo.enddate >= '" + startdate + "' AND jobinfo.enddate <= '" + enddate  + "'"
+    if args.partition is not None:
+        sql += " AND jobinfo.part = '" + args.partition + "'"
     cursorcost.execute(sql)
     data=cursorcost.fetchone()
     spot1 = "0"
