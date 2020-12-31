@@ -16,6 +16,10 @@ parser.add_argument('--defaults-analysis',
                     dest='defaults_analysis',
                     type=str,
                     help='MySQL connection file for analysis database')
+parser.add_argument('--recalculate',
+                    dest='recalculate',
+                    action='store_true',
+                    help='Recalculate AWS costs for all jobs (may be time-intensive)')
 parser.add_argument('-v', '--verbose',
                     dest='verbose',
                     action='store_true',
@@ -46,8 +50,14 @@ while True:
     except:
         break
 
-# Calculate AWS costs for slurm jobs, based on job info which has been imported from the slurm database
-sql = "SELECT a.jobid,a.runtime,a.cores,a.mem,a.nodes,a.gpus FROM jobinfo a NATURAL LEFT JOIN Amazonjobcost b WHERE b.jobid IS NULL ORDER BY a.jobid DESC"
+# Calculate AWS costs for slurm jobs, based on job info which has been imported from the slurm database.  This only
+# acts on jobs for which AWS costs have not been calculated yet.
+sql = "SELECT a.jobid,a.runtime,a.cores,a.mem,a.nodes,a.gpus,a.dbid FROM jobinfo a NATURAL LEFT JOIN Amazonjobcost b WHERE b.dbid IS NULL ORDER BY a.dbid DESC"
+
+if args.recalculate:
+    sql = "SELECT a.jobid,a.runtime,a.cores,a.mem,a.nodes,a.gpus,a.dbid FROM jobinfo a NATURAL LEFT JOIN Amazonjobcost b ORDER BY a.dbid DESC"
+    pass
+
 cursorcost.execute(sql)
 count = 0
 total_count = cursorcost.rowcount
@@ -60,6 +70,7 @@ while True:
         mem=data[3]
         nodes=data[4]
         gpus=data[5]
+        dbid=data[6]
         for row in amazon:
             if cores <= row['cores'] and mem <= row['mem'] and gpus <= row['gpus']:
                 selectedrow=row
@@ -68,7 +79,7 @@ while True:
 # Take the cost / 100 to get cents/hr. Divide that by 3600 to get cents/second, and round up to the nearest penny. Save as a string since we're using it for string manipulation
         reservedcost=str(math.ceil(row['reservedcost']*runtime*nodes/360000))
         spotcost=str(math.ceil(row['spotcost']*runtime*nodes/360000))
-        sql = "REPLACE INTO Amazonjobcost (jobid,instancetype,origreservedcost,origspotcost,latestreservedcost,latestspotcost) VALUES (" + jobid + ",'" + selectedrow['name'] + "'," + reservedcost + "," + spotcost + "," + reservedcost + "," + spotcost + ")"
+        sql = "REPLACE INTO Amazonjobcost (dbid,jobid,instancetype,origreservedcost,origspotcost,latestreservedcost,latestspotcost) VALUES (" + str(dbid) + "," + jobid + ",'" + selectedrow['name'] + "'," + reservedcost + "," + spotcost + "," + reservedcost + "," + spotcost + ")"
         cursoradd.execute(sql)
         dbcost.commit()
     except:

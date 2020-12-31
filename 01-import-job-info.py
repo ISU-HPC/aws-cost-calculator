@@ -17,7 +17,7 @@ parser.add_argument('-d', '--days',
                     dest='days',
                     metavar='N',
                     type=int,
-                    help='Import last N days of slurm jobs (default: 30)')
+                    help='Import last N days of slurm jobs (default: 30).  Ignored if --start and/or --end are used.')
 parser.add_argument('--defaults-analysis',
                     dest='defaults_analysis',
                     type=str,
@@ -30,6 +30,16 @@ parser.add_argument('--slurm-job-table',
                     dest='slurm_job_table',
                     type=str,
                     help='Name of slurm job-info table (default: ${clustername}_job_table)')
+parser.add_argument('--start',
+                    dest='start',
+                    metavar='YYYY-MM-DD',
+                    type=str,
+                    help='Start date for job import (default: 30 days before today)')
+parser.add_argument('--end',
+                    dest='end',
+                    metavar='YYYY-MM-DD',
+                    type=str,
+                    help='End date for job import (default: now)')
 parser.add_argument('-v', '--verbose',
                     dest='verbose',
                     action='store_true',
@@ -69,13 +79,29 @@ else:
     job_table = clustername + "_job_table"
     pass
 
+# Determine query dates
+startdate = str(round(time.time() - (days * 86400)))   # Initialize to N days before now
+enddate = str(round(time.time()))                      # Initialize to now
+
+if args.start is not None:
+    startdate = datetime.strptime(args.start, '%Y-%m-%d').timestamp()
+    pass
+if args.end is not None:
+    enddate = datetime.strptime(args.end, '%Y-%m-%d').timestamp()  # Timestamp of 12:00:00am (i.e., start of the day)
+    enddate += 86400       # Use *end* of the day to be inclusive.
+    pass
+
+
+
+
 dbcost = pymysql.connect(read_default_file=defaults_file)
 dbslurm = pymysql.connect(read_default_file=defaults_file_slurm)
 
 cursorslurm = dbslurm.cursor()
 
 # Build SQL query.  Note back-ticks for cases with non-standard characters in the job table name.
-sql = "SELECT id_job,time_start,time_end,tres_alloc,gres_alloc FROM `" + job_table + "` WHERE tres_alloc <> '' AND time_start > " + str(round (time.time() - (days * 86400))) + " AND time_end <>0"
+sql = "SELECT job_db_inx,id_job,time_start,time_end,tres_alloc,gres_alloc,`partition` FROM `" + job_table + "` WHERE tres_alloc <> '' AND time_start > " + str(startdate) + " AND time_end < " + str(enddate) + " AND time_end <>0"
+
 
 cursorslurm.execute(sql)
 cursorcost = dbcost.cursor()
@@ -84,14 +110,17 @@ total_count = cursorslurm.rowcount
 while True:
     try:
         data=cursorslurm.fetchone()
-        jobid = data[0]
-        runtime = data[2]-data[1]
+        dbid = data[0]
+        jobid = data[1]
+        runtime = data[3]-data[2]
         enddate = date.fromtimestamp(data[2]).strftime("%Y-%m-%d")
         gpus = 0
         gres = {}
-        tres=dict(s.split('=',1) for s in data[3].split(","))
-        if data[4] != '':
-            gres = dict(s.split(':',1) for s in data[4].split(",")) 
+        tres=dict(s.split('=',1) for s in data[4].split(","))
+        if data[5] != '':
+            gres = dict(s.split(':',1) for s in data[5].split(",")) 
+            pass 
+        part = data[6]
 
         # NOTE: Your trackables resources may be different than mine. I'm not positive how things change site-to-site.
         # Separate out the tres
@@ -109,8 +138,8 @@ while True:
             gpus=gres['gpu']
 
         # Insert data into analysis job info table.  REPLACE is used so that re-processing slurm jobs will update values as necessary.
-        sql = "REPLACE INTO jobinfo (jobid, runtime, enddate, cores, mem, nodes, gpus) VALUES (" + str(jobid) + "," + str(runtime) + ",'" + enddate + "'," + str(cores) + "," + str(mem) + "," + str(nodes) + "," + str(gpus) + ")"
-        cursorcost.execute(sql)
+        sql2 = "REPLACE INTO jobinfo (dbid, jobid, runtime, enddate, cores, mem, nodes, gpus, part) VALUES (" + str(dbid) + "," + str(jobid) + "," + str(runtime) + ",'" + enddate + "'," + str(cores) + "," + str(mem) + "," + str(nodes) + "," + str(gpus) + ",'" + str(part) + "')"
+        cursorcost.execute(sql2)
         dbcost.commit()
     
         count += 1
