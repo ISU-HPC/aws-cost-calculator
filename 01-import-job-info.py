@@ -113,7 +113,7 @@ while True:
         dbid = data[0]
         jobid = data[1]
         runtime = data[3]-data[2]
-        enddate = date.fromtimestamp(data[2]).strftime("%Y-%m-%d")
+        enddate = date.fromtimestamp(data[3]).strftime("%Y-%m-%d")
         gpus = 0
         gres = {}
         tres=dict(s.split('=',1) for s in data[4].split(","))
