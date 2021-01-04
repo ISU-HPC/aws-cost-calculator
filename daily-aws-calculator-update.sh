@@ -1,6 +1,6 @@
 #!/bin/bash
 
-script_dir=/home/$USER/aws-cost-calculator
+script_dir=$HOME/aws-cost-calculator
 
 # Import jobs, for last 3 days
 $script_dir/01-import-job-info.py -d 3
