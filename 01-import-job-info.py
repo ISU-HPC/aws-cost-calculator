@@ -116,11 +116,18 @@ dbslurm = pymysql.connect(read_default_file=defaults_file_slurm)
 
 cursorslurm = dbslurm.cursor()
 
-# Build SQL query.  Note back-ticks for cases with non-standard characters in the job table name.
-sql = "SELECT job_db_inx,id_job,time_start,time_end,tres_alloc,gres_alloc,`partition` FROM `" + job_table + "` WHERE tres_alloc <> '' AND time_start > " + str(startdate) + " AND time_end < " + str(enddate) + " AND time_end <>0"
+
+try:
+    # Build SQL query.  Note back-ticks for cases with non-standard characters in the job table name.
+    sql = "SELECT job_db_inx,id_job,time_start,time_end,tres_alloc,gres_used,`partition` FROM `" + job_table + "` WHERE tres_alloc <> '' AND time_start > " + str(startdate) + " AND time_end < " + str(enddate) + " AND time_end <>0"
+    cursorslurm.execute(sql)
+except:
+    # Try with older query
+    sql = "SELECT job_db_inx,id_job,time_start,time_end,tres_alloc,gres_alloc,`partition` FROM `" + job_table + "` WHERE tres_alloc <> '' AND time_start > " + str(startdate) + " AND time_end < " + str(enddate) + " AND time_end <>0"
+    cursorslurm.execute(sql)
 
 
-cursorslurm.execute(sql)
+
 cursorcost = dbcost.cursor()
 count = 0
 total_count = cursorslurm.rowcount
